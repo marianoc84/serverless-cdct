@@ -1,0 +1,17 @@
+{
+  "name": "orders",
+  "version": "1.0.0",
+  "description": "Orders microservice",
+  "scripts": {
+    "test": "jest --findRelatedTests test/provider.test.js"
+  },
+  "author": "Mariano Calandra",
+  "license": "ISC",
+  "devDependencies": {
+    "jest": "24.9.0",
+    "@pact-foundation/pact": "9.2.2"
+  },
+  "dependencies": {
+    "aws-sdk": "2.574.0"
+  }
+}

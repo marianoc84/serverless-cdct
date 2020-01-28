@@ -1,0 +1,101 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform:
+- AWS::Serverless-2016-10-31
+
+Resources:
+#region CreateOrder function
+  CreateOrderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: CreateOrder
+      Handler: orders/src/create-order-lambda.handler
+      Runtime: nodejs12.x
+      Environment:
+        Variables:
+          QUEUE_URL: !Ref OrdersQueue
+      Role:
+        Fn::GetAtt:
+        - CreateOrderFunctionRole
+        - Arn
+
+  CreateOrderFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: CreateOrderFunctionRole
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [lambda.amazonaws.com]
+          Action: sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+      - PolicyName: CreateOrder
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'sqs:SendMessage'
+              Resource: 
+                - Fn::GetAtt: 
+                  - "OrdersQueue"
+                  - "Arn"
+#endregion
+
+#region AddOrder function
+  AddOrderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: AddOrder
+      Handler: list-of-orders/src/add-order-lambda.handler
+      Runtime: nodejs12.x
+      Role:
+        Fn::GetAtt:
+        - AddOrderFunctionRole
+        - Arn
+      Events:
+        Mapping:
+          Type: SQS
+          Properties:
+            BatchSize: 1
+            Queue: 
+              Fn::GetAtt: 
+              - "OrdersQueue"
+              - "Arn"
+
+  AddOrderFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: AddOrderFunctionRole
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [lambda.amazonaws.com]
+          Action: sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+      - PolicyName: AddOrder
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'sqs:ReceiveMessage'
+                - 'sqs:DeleteMessage'
+                - 'sqs:GetQueueAttributes'
+              Resource: 
+                - Fn::GetAtt: 
+                  - "OrdersQueue"
+                  - "Arn"
+#endregion
+
+  OrdersQueue:
+    Type: AWS::SQS::Queue
+    Properties: 
+      QueueName: Orders
